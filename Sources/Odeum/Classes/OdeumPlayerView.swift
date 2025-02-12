@@ -209,7 +209,6 @@ public class OdeumPlayerView: UIView {
         NSLayoutConstraint.activate([
             playerControl.bottomAnchor.constraint(equalTo: progressBar.centerYAnchor),
             playerControl.centerXAnchor.constraint(equalTo: centerXAnchor),
-            playerControl.topAnchor.constraint(greaterThanOrEqualTo: topAnchor, constant: 16),
             playerControl.leftAnchor.constraint(greaterThanOrEqualTo: leftAnchor, constant: 16),
             playerControl.rightAnchor.constraint(lessThanOrEqualTo: rightAnchor, constant: -16),
             playerControl.heightAnchor.constraint(lessThanOrEqualToConstant: 48),
