@@ -206,7 +206,7 @@ public class OdeumPlayerView: UIView {
         
         activatePlaceholderViewConstraints()
         activateVideoViewHolderConstraints()
-        activateCenterPlayControlsConstraints()
+        activatePlayerControlConstraints()
         
         // Add bottom bar (progress + audio + fullscreen)
         addSubview(bottomBarView)
@@ -254,24 +254,20 @@ public class OdeumPlayerView: UIView {
         ])
     }
     
-    func activateCenterPlayControlsConstraints() {
-        playerControl.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            // Center in the view
-            playerControl.centerXAnchor.constraint(equalTo: centerXAnchor),
-            playerControl.centerYAnchor.constraint(equalTo: centerYAnchor),
-            // bounding constraints
-            playerControl.topAnchor.constraint(greaterThanOrEqualTo: topAnchor, constant: 16),
-            playerControl.leftAnchor.constraint(greaterThanOrEqualTo: leftAnchor, constant: 16),
-            playerControl.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor, constant: -16),
-            playerControl.rightAnchor.constraint(lessThanOrEqualTo: rightAnchor, constant: -16),
-            // size constraints
-            playerControl.heightAnchor.constraint(lessThanOrEqualToConstant: 48),
-            playerControl.widthAnchor.constraint(lessThanOrEqualToConstant: 240),
-            // 3 if you have replay/play/forward in the stack
-            playerControl.widthAnchor.constraint(equalTo: playerControl.heightAnchor, multiplier: 3)
-        ])
-    }
+    func activatePlayerControlConstraints() {
+            playerControl.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                playerControl.centerYAnchor.constraint(equalTo: centerYAnchor),
+                playerControl.centerXAnchor.constraint(equalTo: centerXAnchor),
+                playerControl.topAnchor.constraint(greaterThanOrEqualTo: topAnchor, constant: 16),
+                playerControl.leftAnchor.constraint(greaterThanOrEqualTo: leftAnchor, constant: 16),
+                playerControl.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor, constant: -16),
+                playerControl.rightAnchor.constraint(lessThanOrEqualTo: rightAnchor, constant: -16),
+                playerControl.heightAnchor.constraint(lessThanOrEqualToConstant: 48),
+                playerControl.widthAnchor.constraint(lessThanOrEqualToConstant: 240),
+                playerControl.widthAnchor.constraint(equalTo: playerControl.heightAnchor, multiplier: 3)
+            ])
+        }
     
     func activateBottomBarConstraints() {
         bottomBarView.translatesAutoresizingMaskIntoConstraints = false
@@ -341,15 +337,19 @@ public class OdeumPlayerView: UIView {
             )
         }
     
-    public func showControl() {
-        controlAppearance = .goingToShow
-        UIView.animate(withDuration: 0.45, delay: .zero, options: .curveEaseInOut) {
-            self.playerControl.alpha = 1
-            self.bottomBarView.alpha = 1
-        } completion: { _ in
-            self.controlAppearance = .shown
-        }
-    }
+    func showControl() {
+           controlAppearance = .goingToShow
+           UIView.animate(
+               withDuration: 0.45,
+               delay: .zero,
+               options: .curveEaseInOut) { [weak progressBar, weak playerControl] in
+                   progressBar?.alpha = 1
+                   playerControl?.alpha = 1
+               } completion: { [weak self] complete in
+                   guard complete else { return }
+                   self?.controlAppearance = .shown
+               }
+       }
     
     public func hideControl() {
         controlAppearance = .goingToHide
