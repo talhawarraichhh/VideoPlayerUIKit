@@ -209,13 +209,13 @@ public class OdeumPlayerView: UIView {
         activateCenterPlayControlsConstraints()
         
         // Add bottom bar (progress + audio + fullscreen)
-        addSubview(bottomBarView)
-        bottomBarView.addSubview(progressBar)
-        bottomBarView.addSubview(bottomRightStack)
+//        addSubview(bottomBarView)
+//        bottomBarView.addSubview(progressBar)
+//        bottomBarView.addSubview(bottomRightStack)
         activateBottomBarConstraints()
         
         activateSpinnerConstraints()
-        bringSubviewToFront(bottomBarView)
+//        bringSubviewToFront(bottomBarView)
         bringSubviewToFront(playerControl)
         
         playerControl.backgroundColor = UIColor.green.withAlphaComponent(0.4)
