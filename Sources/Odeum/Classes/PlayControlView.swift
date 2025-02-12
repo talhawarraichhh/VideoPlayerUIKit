@@ -34,11 +34,9 @@ public class PlayControlView: UIView {
     public private(set) lazy var buttonStack: UIStackView = {
         let stack = UIStackView(
             arrangedSubviews: [
-                audioButton,
                 replayButton,
                 playButton,
-                forwardButton,
-                fullScreenButton
+                forwardButton
             ]
         )
         stack.alignment = .fill

@@ -11,11 +11,52 @@ import UIKit
 import AVFoundation
 import AVKit
 
-// MARK: OdeumPlayerView
-
 public class OdeumPlayerView: UIView {
     
-    // MARK: View
+    // MARK: - Subviews
+    
+    /// The container for progress bar + audio/fullscreen
+    public lazy var bottomBarView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .clear
+        return view
+    }()
+    
+    public lazy var bottomRightStack: UIStackView = {
+        let stack = UIStackView(arrangedSubviews: [audioButton, fullscreenButton])
+        stack.axis = .horizontal
+        stack.alignment = .fill
+        stack.distribution = .equalSpacing
+        stack.spacing = 12
+        return stack
+    }()
+    
+    public lazy var audioButton: UIButton = {
+        let button = UIButton(type: .custom)
+        // For example: a speaker wave icon
+        if #available(iOS 13.0, *) {
+            button.setImage(UIImage(systemName: "speaker.wave.2.fill"), for: .normal)
+        } else {
+            // fallback for older iOS, e.g. use a stored asset
+            button.setImage(UIImage(named: "audio_unmute"), for: .normal)
+        }
+        button.tintColor = .white
+        button.addTarget(self, action: #selector(didTapAudio), for: .touchUpInside)
+        return button
+    }()
+    
+    public lazy var fullscreenButton: UIButton = {
+        let button = UIButton(type: .custom)
+        if #available(iOS 13.0, *) {
+            button.setImage(UIImage(systemName: "rectangle.expand.vertical"), for: .normal)
+        } else {
+            button.setImage(UIImage(named: "fullscreen_icon"), for: .normal)
+        }
+        button.tintColor = .white
+        button.addTarget(self, action: #selector(didTapFullscreen), for: .touchUpInside)
+        return button
+    }()
+
     
     public internal(set) lazy var progressBar: UISlider = {
         let bar = UISlider()
@@ -31,6 +72,7 @@ public class OdeumPlayerView: UIView {
         bar.addTarget(self, action: #selector(didSlide(_:)), for: .touchUpOutside)
         return bar
     }()
+    
     public internal(set) lazy var placeholderView: UIImageView = {
         let view = UIImageView()
         view.contentMode = .scaleAspectFill
@@ -38,25 +80,30 @@ public class OdeumPlayerView: UIView {
         view.clipsToBounds = true
         return view
     }()
+    
     public internal(set) lazy var videoViewHolder: UIView = {
         let view = UIView()
         view.backgroundColor = .clear
         view.addGestureRecognizer(tapGestureRecognizer)
         return view
     }()
+    
     public internal(set) lazy var playerControl: PlayControlView = {
         let control = PlayControlView()
         control.delegate = self
         return control
     }()
+    
     public internal(set) lazy var spinner: UIActivityIndicatorView = .init(style: .white)
+    
     lazy var tapGestureRecognizer: UITapGestureRecognizer = {
         let gesture = UITapGestureRecognizer(target: self, action: #selector(didTap(_:)))
         gesture.cancelsTouchesInView = false
         return gesture
     }()
     
-    // MARK: State
+    // MARK: - Player / State
+    
     public var videoIsFinished: Bool {
         guard let duration = player.currentItem?.duration else { return false }
         return player.currentTime() >= duration
@@ -64,58 +111,48 @@ public class OdeumPlayerView: UIView {
     public var isBuffering: Bool {
         spinner.alpha < 1
     }
-    public var audioState: AudioState {
-        playerControl.audioState
-    }
+    
+    // The center controls track these states:
+    public var audioState: AudioState { playerControl.audioState }
     public var replayStep: ReplayStep {
-        get {
-            playerControl.replayStep
-        } set {
-            playerControl.replayStep = newValue
-        }
+        get { playerControl.replayStep }
+        set { playerControl.replayStep = newValue }
     }
-    public var playState: PlayState {
-        playerControl.playState
-    }
+    public var playState: PlayState { playerControl.playState }
     public var forwardStep: ForwardStep {
-        get {
-            playerControl.forwardStep
-        } set {
-            playerControl.forwardStep = newValue
-        }
+        get { playerControl.forwardStep }
+        set { playerControl.forwardStep = newValue }
     }
-    public var fullScreenState: FullScreenState {
-        playerControl.fullScreenState
-    }
+    public var fullScreenState: FullScreenState { playerControl.fullScreenState }
+    
     public var videoItem: AVPlayerItem? {
         player.currentItem
     }
     public internal(set) var controlAppearance: ControlAppearanceState = .hidden
-    
-    // MARK: Delegate
-    
     public weak var delegate: OdeumPlayerViewDelegate?
     
-    // MARK: Player
-    
+    /// The main AVPlayer
     lazy var player: AVPlayer = {
         let player = AVPlayer()
         player.addPeriodicTimeObserver(
             forInterval: CMTime(seconds: 0.5, preferredTimescale: 1000),
-            queue: .main) { [weak self] time in
-                self?.timeTracked(time)
-            }
+            queue: .main
+        ) { [weak self] time in
+            self?.timeTracked(time)
+        }
         player.actionAtItemEnd = .pause
         player.addObserver(self, forKeyPath: "timeControlStatus", options: [.old, .new], context: nil)
         return player
     }()
+    
+    /// The layer that displays the video
     lazy var playerLayer: AVPlayerLayer = {
         let layer = AVPlayerLayer(player: player)
-        layer.videoGravity = .resizeAspect
+        // Use fill if you want to crop; .resizeAspect if you prefer letterboxing
+        layer.videoGravity = .resizeAspectFill
         return layer
     }()
     
-    // MARK: Inspectable Properties
     @IBInspectable
     public var videoControlShownDuration: NSNumber = 3
     
@@ -126,63 +163,76 @@ public class OdeumPlayerView: UIView {
         }
     }
     
-    // MARK: Properties
     public internal(set) var url: URL?
     var previousTimeStatus: AVPlayer.TimeControlStatus?
     var hideWorker: DispatchWorkItem?
     weak var fullScreenViewController: UIViewController?
     var manuallySeek: Bool = false
-    var videoControlShownTimeInterval: TimeInterval { .init(truncating: videoControlShownDuration) }
     
-    // MARK: Initializer
+    var videoControlShownTimeInterval: TimeInterval {
+        .init(truncating: videoControlShownDuration)
+    }
+    
+    // MARK: - Lifecycle
     
     public override init(frame: CGRect) {
         super.init(frame: frame)
         backgroundColor = .black
         buildView()
     }
-    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
     deinit {
         player.removeObserver(self, forKeyPath: "timeControlStatus", context: nil)
     }
     
     public override func layoutSubviews() {
         super.layoutSubviews()
+        // Size the video layer
         playerLayer.frame = videoViewHolder.bounds
         videoViewHolder.layer.addSublayer(playerLayer)
+        
+        // Round corners of center play controls
         playerControl.layer.cornerRadius = playerControl.bounds.height / 2
         playerControl.clipsToBounds = true
     }
     
-    // MARK: View Arrangement and Animating
+    // MARK: - Setup
     
     func buildView() {
         makeControlTransparent()
         insertSubviewsInPlace()
+        
         activatePlaceholderViewConstraints()
         activateVideoViewHolderConstraints()
-        activatePlayerControlConstraints()
-        activateProgressBarConstraints()
+        activateCenterPlayControlsConstraints()
+        
+        // Add bottom bar (progress + audio + fullscreen)
+        addSubview(bottomBarView)
+        bottomBarView.addSubview(progressBar)
+        bottomBarView.addSubview(bottomRightStack)
+        activateBottomBarConstraints()
+        
         activateSpinnerConstraints()
+    }
+    
+    func makeControlTransparent() {
+        playerControl.alpha = 0
+        spinner.alpha = 0
+        bottomBarView.alpha = 0
     }
     
     func insertSubviewsInPlace() {
         addSubview(placeholderView)
         addSubview(videoViewHolder)
         addSubview(spinner)
-        addSubview(progressBar)
+        
+        // The center controls
         addSubview(playerControl)
     }
     
-    func makeControlTransparent() {
-        playerControl.alpha = 0
-        progressBar.alpha = 0
-        spinner.alpha = 0
-    }
+    // MARK: - Subview Constraints
     
     func activatePlaceholderViewConstraints() {
         placeholderView.translatesAutoresizingMaskIntoConstraints = false
@@ -204,27 +254,47 @@ public class OdeumPlayerView: UIView {
         ])
     }
     
-    func activatePlayerControlConstraints() {
+    func activateCenterPlayControlsConstraints() {
         playerControl.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            playerControl.centerYAnchor.constraint(equalTo: centerYAnchor),
+            // Center in the view
             playerControl.centerXAnchor.constraint(equalTo: centerXAnchor),
+            playerControl.centerYAnchor.constraint(equalTo: centerYAnchor),
+            // bounding constraints
             playerControl.topAnchor.constraint(greaterThanOrEqualTo: topAnchor, constant: 16),
             playerControl.leftAnchor.constraint(greaterThanOrEqualTo: leftAnchor, constant: 16),
             playerControl.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor, constant: -16),
             playerControl.rightAnchor.constraint(lessThanOrEqualTo: rightAnchor, constant: -16),
+            // size constraints
             playerControl.heightAnchor.constraint(lessThanOrEqualToConstant: 48),
             playerControl.widthAnchor.constraint(lessThanOrEqualToConstant: 240),
-            playerControl.widthAnchor.constraint(equalTo: playerControl.heightAnchor, multiplier: 5)
+            // 3 if you have replay/play/forward in the stack
+            playerControl.widthAnchor.constraint(equalTo: playerControl.heightAnchor, multiplier: 3)
         ])
     }
     
-    func activateProgressBarConstraints() {
+    func activateBottomBarConstraints() {
+        bottomBarView.translatesAutoresizingMaskIntoConstraints = false
         progressBar.translatesAutoresizingMaskIntoConstraints = false
+        bottomRightStack.translatesAutoresizingMaskIntoConstraints = false
+        
         NSLayoutConstraint.activate([
-            progressBar.leftAnchor.constraint(equalTo: leftAnchor, constant: 8),
-            progressBar.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
-            progressBar.rightAnchor.constraint(equalTo: rightAnchor, constant: -8)
+            // bottomBar pinned to the bottom, full width
+            bottomBarView.leftAnchor.constraint(equalTo: leftAnchor),
+            bottomBarView.rightAnchor.constraint(equalTo: rightAnchor),
+            bottomBarView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            bottomBarView.heightAnchor.constraint(equalToConstant: 50),
+            
+            // progressBar pinned to left side
+            progressBar.leftAnchor.constraint(equalTo: bottomBarView.leftAnchor, constant: 12),
+            progressBar.centerYAnchor.constraint(equalTo: bottomBarView.centerYAnchor),
+            
+            // bottomRightStack pinned to right
+            bottomRightStack.rightAnchor.constraint(equalTo: bottomBarView.rightAnchor, constant: -12),
+            bottomRightStack.centerYAnchor.constraint(equalTo: bottomBarView.centerYAnchor),
+            
+            // progressBar extends until bottomRightStack
+            progressBar.rightAnchor.constraint(equalTo: bottomRightStack.leftAnchor, constant: -12),
         ])
     }
     
@@ -233,6 +303,7 @@ public class OdeumPlayerView: UIView {
         NSLayoutConstraint.activate([
             spinner.centerYAnchor.constraint(equalTo: centerYAnchor),
             spinner.centerXAnchor.constraint(equalTo: centerXAnchor),
+            
             spinner.topAnchor.constraint(greaterThanOrEqualTo: topAnchor, constant: 16),
             spinner.leftAnchor.constraint(greaterThanOrEqualTo: leftAnchor, constant: 16),
             spinner.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor, constant: -16),
@@ -240,64 +311,45 @@ public class OdeumPlayerView: UIView {
         ])
     }
     
-    func showSpinner() {
-        self.spinner.startAnimating()
-        UIView.animate(
-            withDuration: 0.2,
-            delay: 0,
-            options: .curveEaseInOut,
-            animations: {
-                self.spinner.alpha = 1
-            },
-            completion: nil
-        )
-    }
+    // MARK: - Show/Hide
     
-    func hideSpinner() {
-        UIView.animate(
-            withDuration: 0.2,
-            delay: 0,
-            options: .curveEaseInOut,
-            animations: {
-                self.spinner.alpha = 0
-                self.placeholderView.alpha = 0
-            },
-            completion: { _ in
-                self.spinner.stopAnimating()
-            }
-        )
-    }
-    
-    func showControl() {
+    public func showControl() {
         controlAppearance = .goingToShow
-        UIView.animate(
-            withDuration: 0.45,
-            delay: .zero,
-            options: .curveEaseInOut) { [weak progressBar, weak playerControl] in
-                progressBar?.alpha = 1
-                playerControl?.alpha = 1
-            } completion: { [weak self] complete in
-                guard complete else { return }
-                self?.controlAppearance = .shown
-            }
+        UIView.animate(withDuration: 0.45, delay: .zero, options: .curveEaseInOut) {
+            self.playerControl.alpha = 1
+            self.bottomBarView.alpha = 1
+        } completion: { _ in
+            self.controlAppearance = .shown
+        }
     }
     
-    func hideControl() {
+    public func hideControl() {
         controlAppearance = .goingToHide
-        UIView.animate(
-            withDuration: 0.45,
-            delay: .zero,
-            options: .curveEaseInOut) { [weak progressBar, weak playerControl] in
-                progressBar?.alpha = .zero
-                playerControl?.alpha = .zero
-            } completion: { [weak self] complete in
-                guard complete else { return }
-                self?.controlAppearance = .hidden
-            }
+        UIView.animate(withDuration: 0.45, delay: .zero, options: .curveEaseInOut) {
+            self.playerControl.alpha = 0
+            self.bottomBarView.alpha = 0
+        } completion: { _ in
+            self.controlAppearance = .hidden
+        }
     }
     
+    @objc func didTapAudio() {
+            // Toggle audio
+            // For example:
+            let isCurrentlyMute = audioState == .mute
+            set(mute: !isCurrentlyMute)
+        }
+        
+        @objc func didTapFullscreen() {
+            // Switch fullscreen
+            // For example:
+            if fullScreenState == .minimize {
+                goFullScreen()
+            } else {
+                dismissFullScreen()
+            }
+        }
 }
-
 public extension OdeumPlayerView {
     
     enum ControlAppearanceState: Equatable {
