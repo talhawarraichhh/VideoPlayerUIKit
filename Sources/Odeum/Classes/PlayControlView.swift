@@ -118,7 +118,7 @@ public class PlayControlView: UIView {
     }
     
     func buildView() {
-        setupBlurEffectView()
+//        setupBlurEffectView()
         setupButtonStack()
     }
     
