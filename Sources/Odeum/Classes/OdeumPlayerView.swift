@@ -111,7 +111,7 @@ public class OdeumPlayerView: UIView {
     }()
     lazy var playerLayer: AVPlayerLayer = {
         let layer = AVPlayerLayer(player: player)
-        layer.videoGravity = .resizeAspect
+        layer.videoGravity = .resizeAspectFill
         return layer
     }()
     
