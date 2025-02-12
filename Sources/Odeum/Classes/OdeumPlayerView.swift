@@ -313,6 +313,34 @@ public class OdeumPlayerView: UIView {
     
     // MARK: - Show/Hide
     
+    func showSpinner() {
+            self.spinner.startAnimating()
+            UIView.animate(
+                withDuration: 0.2,
+                delay: 0,
+                options: .curveEaseInOut,
+                animations: {
+                    self.spinner.alpha = 1
+                },
+                completion: nil
+            )
+        }
+        
+        func hideSpinner() {
+            UIView.animate(
+                withDuration: 0.2,
+                delay: 0,
+                options: .curveEaseInOut,
+                animations: {
+                    self.spinner.alpha = 0
+                    self.placeholderView.alpha = 0
+                },
+                completion: { _ in
+                    self.spinner.stopAnimating()
+                }
+            )
+        }
+    
     public func showControl() {
         controlAppearance = .goingToShow
         UIView.animate(withDuration: 0.45, delay: .zero, options: .curveEaseInOut) {
