@@ -217,6 +217,9 @@ public class OdeumPlayerView: UIView {
         activateSpinnerConstraints()
         bringSubviewToFront(bottomBarView)
         bringSubviewToFront(playerControl)
+        
+        playerControl.backgroundColor = UIColor.green.withAlphaComponent(0.4)
+
     }
     
     func makeControlTransparent() {
