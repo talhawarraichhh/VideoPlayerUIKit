@@ -207,11 +207,10 @@ public class OdeumPlayerView: UIView {
     func activatePlayerControlConstraints() {
         playerControl.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            playerControl.centerYAnchor.constraint(equalTo: centerYAnchor),
+            playerControl.bottomAnchor.constraint(equalTo: progressBar.centerYAnchor),
             playerControl.centerXAnchor.constraint(equalTo: centerXAnchor),
             playerControl.topAnchor.constraint(greaterThanOrEqualTo: topAnchor, constant: 16),
             playerControl.leftAnchor.constraint(greaterThanOrEqualTo: leftAnchor, constant: 16),
-            playerControl.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor, constant: -16),
             playerControl.rightAnchor.constraint(lessThanOrEqualTo: rightAnchor, constant: -16),
             playerControl.heightAnchor.constraint(lessThanOrEqualToConstant: 48),
             playerControl.widthAnchor.constraint(lessThanOrEqualToConstant: 240),

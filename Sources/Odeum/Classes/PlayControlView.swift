@@ -31,13 +31,27 @@ public class PlayControlView: UIView {
         effect.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         return effect
     }()
-    public private(set) lazy var buttonStack: UIStackView = {
+    public private(set) lazy var centerStack: UIStackView = {
+        let stack = UIStackView(
+            arrangedSubviews: [
+                replayButton,
+                playButton,
+                forwardButton
+            ]
+        )
+        stack.alignment = .fill
+        stack.axis = .horizontal
+        stack.distribution = .fillEqually
+        stack.spacing = 0
+        stack.layoutMargins = .zero
+        stack.isLayoutMarginsRelativeArrangement = true
+        return stack
+    }()
+    
+    public private(set) lazy var bottomRightStack: UIStackView = {
         let stack = UIStackView(
             arrangedSubviews: [
                 audioButton,
-                replayButton,
-                playButton,
-                forwardButton,
                 fullScreenButton
             ]
         )
@@ -49,6 +63,7 @@ public class PlayControlView: UIView {
         stack.isLayoutMarginsRelativeArrangement = true
         return stack
     }()
+    
     public private(set) lazy var audioButton: UIButton = createButton(
         with: audioState.icon,
         selector: #selector(didTapAudio(_:))
@@ -119,7 +134,8 @@ public class PlayControlView: UIView {
     
     func buildView() {
         setupBlurEffectView()
-        setupButtonStack()
+        setupCenterStack()
+        setupBottomRightStack()
     }
     
     func setupBlurEffectView() {
@@ -133,35 +149,56 @@ public class PlayControlView: UIView {
         ])
     }
     
-    func setupButtonStack() {
-        buttonStack.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(buttonStack)
+    func setupCenterStack() {
+        centerStack.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(centerStack)
+        
+        // Example constraints to center it in the control view
         NSLayoutConstraint.activate([
-            buttonStack.leftAnchor.constraint(equalTo: leftAnchor),
-            buttonStack.topAnchor.constraint(equalTo: topAnchor),
-            buttonStack.rightAnchor.constraint(equalTo: rightAnchor),
-            buttonStack.bottomAnchor.constraint(equalTo: bottomAnchor),
-            buttonStack.widthAnchor.constraint(equalTo: buttonStack.heightAnchor, multiplier: 5)
+            centerStack.centerXAnchor.constraint(equalTo: centerXAnchor),
+            centerStack.centerYAnchor.constraint(equalTo: centerYAnchor),
+            centerStack.heightAnchor.constraint(lessThanOrEqualToConstant: 48),
+            centerStack.widthAnchor.constraint(lessThanOrEqualToConstant: 240),
+            centerStack.widthAnchor.constraint(equalTo: centerStack.heightAnchor, multiplier: 3)
+            // Because we only have 3 equally spaced buttons
+        ])
+    }
+    
+    func setupBottomRightStack() {
+        bottomRightStack.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(bottomRightStack)
+        
+        // Pin it near the bottom-right.
+        // The EXACT positioning depends on how you want it aligned
+        // with the progress bar in OdeumPlayerView.
+        // We'll just show it at the bottom-right of this control for now:
+        NSLayoutConstraint.activate([
+            bottomRightStack.rightAnchor.constraint(equalTo: rightAnchor, constant: -8),
+            bottomRightStack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -8),
+            bottomRightStack.heightAnchor.constraint(equalToConstant: 40),
+            // Let the width adapt to 2 buttons:
+            bottomRightStack.widthAnchor.constraint(equalToConstant: 80)
         ])
     }
     
     func createButton(
         with icon: UIImage,
         selector: Selector) -> UIButton {
-        let button = UIButton()
-        button.backgroundColor = .clear
-        button.setImage(icon, for: .normal)
-        button.imageView?.contentMode = .scaleAspectFit
-        button.addTarget(self, action: selector, for: .touchUpInside)
-        return button
-    }
+            let button = UIButton()
+            button.backgroundColor = .clear
+            button.setImage(icon, for: .normal)
+            button.imageView?.contentMode = .scaleAspectFit
+            button.addTarget(self, action: selector, for: .touchUpInside)
+            return button
+        }
     
-    public override func layoutSubviews() {
+    override public func layoutSubviews() {
         super.layoutSubviews()
         let insets = bounds.height / 3
         let playInsets = insets / 3
         let buttonInsets: UIEdgeInsets = .init(top: insets, left: insets, bottom: insets, right: insets)
         let playButtonInsets: UIEdgeInsets = .init(top: playInsets, left: playInsets, bottom: playInsets, right: playInsets)
+        
         audioButton.imageEdgeInsets = buttonInsets
         replayButton.imageEdgeInsets = buttonInsets
         playButton.imageEdgeInsets = playButtonInsets
