@@ -190,6 +190,7 @@ public class OdeumPlayerView: UIView {
     public override func layoutSubviews() {
         super.layoutSubviews()
         // Size the video layer
+        showControl()
         playerLayer.frame = videoViewHolder.bounds
         videoViewHolder.layer.addSublayer(playerLayer)
         
@@ -212,7 +213,7 @@ public class OdeumPlayerView: UIView {
 //        addSubview(bottomBarView)
 //        bottomBarView.addSubview(progressBar)
 //        bottomBarView.addSubview(bottomRightStack)
-        activateBottomBarConstraints()
+//        activateBottomBarConstraints()
         
         activateSpinnerConstraints()
 //        bringSubviewToFront(bottomBarView)
@@ -229,7 +230,7 @@ public class OdeumPlayerView: UIView {
     }
     
     func insertSubviewsInPlace() {
-        addSubview(placeholderView)
+//        addSubview(placeholderView)
         addSubview(videoViewHolder)
         addSubview(spinner)
         
