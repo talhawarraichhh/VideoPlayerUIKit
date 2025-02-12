@@ -33,30 +33,21 @@ public class OdeumPlayerView: UIView {
     
     public lazy var audioButton: UIButton = {
         let button = UIButton(type: .custom)
-        // For example: a speaker wave icon
-        if #available(iOS 13.0, *) {
-            button.setImage(UIImage(systemName: "speaker.wave.2.fill"), for: .normal)
-        } else {
-            // fallback for older iOS, e.g. use a stored asset
-            button.setImage(UIImage(named: "audio_unmute"), for: .normal)
-        }
-        button.tintColor = .white
+        let defaultAudioState: AudioState = .unmute // or .mute, whichever is your starting state
+        button.setImage(defaultAudioState.icon, for: .normal)
         button.addTarget(self, action: #selector(didTapAudio), for: .touchUpInside)
         return button
     }()
+
     
     public lazy var fullscreenButton: UIButton = {
         let button = UIButton(type: .custom)
-        if #available(iOS 13.0, *) {
-            button.setImage(UIImage(systemName: "rectangle.expand.vertical"), for: .normal)
-        } else {
-            button.setImage(UIImage(named: "fullscreen_icon"), for: .normal)
-        }
-        button.tintColor = .white
+        let defaultFullScreenState: FullScreenState = .minimize
+        button.setImage(defaultFullScreenState.icon, for: .normal)
         button.addTarget(self, action: #selector(didTapFullscreen), for: .touchUpInside)
         return button
     }()
-
+    
     
     public internal(set) lazy var progressBar: UISlider = {
         let bar = UISlider()
@@ -206,9 +197,7 @@ public class OdeumPlayerView: UIView {
         
         activatePlaceholderViewConstraints()
         activateVideoViewHolderConstraints()
-        activateCenterPlayControlsConstraints()
-        
-        // Add bottom bar (progress + audio + fullscreen)
+        activatePlayerControlConstraints()
         addSubview(bottomBarView)
         bottomBarView.addSubview(progressBar)
         bottomBarView.addSubview(bottomRightStack)
@@ -254,22 +243,18 @@ public class OdeumPlayerView: UIView {
         ])
     }
     
-    func activateCenterPlayControlsConstraints() {
+    func activatePlayerControlConstraints() {
         playerControl.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
-            // Center in the view
-            playerControl.centerXAnchor.constraint(equalTo: centerXAnchor),
             playerControl.centerYAnchor.constraint(equalTo: centerYAnchor),
-            // bounding constraints
+            playerControl.centerXAnchor.constraint(equalTo: centerXAnchor),
             playerControl.topAnchor.constraint(greaterThanOrEqualTo: topAnchor, constant: 16),
             playerControl.leftAnchor.constraint(greaterThanOrEqualTo: leftAnchor, constant: 16),
             playerControl.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor, constant: -16),
             playerControl.rightAnchor.constraint(lessThanOrEqualTo: rightAnchor, constant: -16),
-            // size constraints
             playerControl.heightAnchor.constraint(lessThanOrEqualToConstant: 48),
             playerControl.widthAnchor.constraint(lessThanOrEqualToConstant: 240),
-            // 3 if you have replay/play/forward in the stack
-            playerControl.widthAnchor.constraint(equalTo: playerControl.heightAnchor, multiplier: 3)
+            playerControl.widthAnchor.constraint(equalTo: playerControl.heightAnchor, multiplier: 5)
         ])
     }
     
@@ -314,41 +299,45 @@ public class OdeumPlayerView: UIView {
     // MARK: - Show/Hide
     
     func showSpinner() {
-            self.spinner.startAnimating()
-            UIView.animate(
-                withDuration: 0.2,
-                delay: 0,
-                options: .curveEaseInOut,
-                animations: {
-                    self.spinner.alpha = 1
-                },
-                completion: nil
-            )
-        }
-        
-        func hideSpinner() {
-            UIView.animate(
-                withDuration: 0.2,
-                delay: 0,
-                options: .curveEaseInOut,
-                animations: {
-                    self.spinner.alpha = 0
-                    self.placeholderView.alpha = 0
-                },
-                completion: { _ in
-                    self.spinner.stopAnimating()
-                }
-            )
-        }
+        self.spinner.startAnimating()
+        UIView.animate(
+            withDuration: 0.2,
+            delay: 0,
+            options: .curveEaseInOut,
+            animations: {
+                self.spinner.alpha = 1
+            },
+            completion: nil
+        )
+    }
     
-    public func showControl() {
+    func hideSpinner() {
+        UIView.animate(
+            withDuration: 0.2,
+            delay: 0,
+            options: .curveEaseInOut,
+            animations: {
+                self.spinner.alpha = 0
+                self.placeholderView.alpha = 0
+            },
+            completion: { _ in
+                self.spinner.stopAnimating()
+            }
+        )
+    }
+    
+    func showControl() {
         controlAppearance = .goingToShow
-        UIView.animate(withDuration: 0.45, delay: .zero, options: .curveEaseInOut) {
-            self.playerControl.alpha = 1
-            self.bottomBarView.alpha = 1
-        } completion: { _ in
-            self.controlAppearance = .shown
-        }
+        UIView.animate(
+            withDuration: 0.45,
+            delay: .zero,
+            options: .curveEaseInOut) { [weak progressBar, weak playerControl] in
+                progressBar?.alpha = 1
+                playerControl?.alpha = 1
+            } completion: { [weak self] complete in
+                guard complete else { return }
+                self?.controlAppearance = .shown
+            }
     }
     
     public func hideControl() {
@@ -362,21 +351,25 @@ public class OdeumPlayerView: UIView {
     }
     
     @objc func didTapAudio() {
-            // Toggle audio
-            // For example:
-            let isCurrentlyMute = audioState == .mute
-            set(mute: !isCurrentlyMute)
+        let nextState: AudioState = (playerControl.audioState == .mute) ? .unmute : .mute
+        playerControl.audioState = nextState
+
+        audioButton.setImage(nextState.icon, for: .normal)
+
+        set(mute: nextState == .mute)
+    }
+
+    
+    @objc func didTapFullscreen() {
+        let nextState: FullScreenState = (playerControl.fullScreenState == .minimize) ? .fullScreen : .minimize
+        playerControl.fullScreenState = nextState
+        fullscreenButton.setImage(nextState.icon, for: .normal)
+        if nextState == .fullScreen {
+            goFullScreen()
+        } else {
+            dismissFullScreen()
         }
-        
-        @objc func didTapFullscreen() {
-            // Switch fullscreen
-            // For example:
-            if fullScreenState == .minimize {
-                goFullScreen()
-            } else {
-                dismissFullScreen()
-            }
-        }
+    }
 }
 public extension OdeumPlayerView {
     
